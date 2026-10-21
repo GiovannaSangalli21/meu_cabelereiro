@@ -56,6 +56,7 @@ O site tem que abrir normalmente em navegadores comuns (Chrome, Firefox, Edge, S
 
 
 ## tabela:
+´´´ mermaid
 ---
 Title: Studio Bella
 ---
@@ -93,3 +94,4 @@ erDiagram
     clientes ||--o{ agendamentos : "realiza"
     cabeleireiras ||--o{ agendamentos : "atende"
     usuarios ||--o{ clientes : "cadastra"
+    ´´´

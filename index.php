@@ -1,34 +1,22 @@
-<!-- Avisa ao navegador que o documento é em HTML5 -->
 <!DOCTYPE html>
-<!-- Começa a página e define o idioma como português do Brasil -->
 <html lang="pt-br">
 <head>
-    <!-- Garante que acentos e ç apareçam do jeito certo -->
-    <meta charset="UTF-8">
-    
-    <!-- Faz a página se adaptar ao tamanho da tela do celular -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- Nome que fica escrito lá em cima na aba do navegador -->
-    <title>Início - Studio Bella</title>
-    
-    <!-- Puxa os estilos de cores e formatação do arquivo CSS -->
-    <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8"> <!-- Permite usar acentos e ç no texto sem quebrar -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Ajusta o tamanho da tela para celulares -->
+    <title>Início - Studio Bella</title> <!-- Título que aparece na aba do navegador -->
+    <link rel="stylesheet" href="css/style.css"> <!-- Conecta o arquivo de estilos (visual CSS) -->
 </head>
 <body>
-    <!-- Puxa o cabeçalho (menu topo) que está em outro arquivo -->
+    <!-- Coloca o cabeçalho do site nesta parte do código -->
     <?php include __DIR__ . '/includes/header.php'; ?>
 
-    <!-- Conteúdo principal que fica no meio da tela -->
+    <!-- Conteúdo principal do meio da página -->
     <main>
-        <!-- Título principal da página -->
-        <h2>Bem-vindo ao Studio Bella</h2>
-        
-        <!-- Texto explicativo para quem está acessando -->
-        <p>Acesse o menu acima para realizar agendamentos, consultar relatórios ou gerir o seu sistema.</p>
+        <h2>Bem-vindo ao Studio Bella</h2> <!-- Título de boas-vindas -->
+        <p>Acesse o menu acima para realizar agendamentos, consultar relatórios ou gerir o seu sistema.</p> <!-- Texto explicativo para o usuário -->
     </main>
 
-    <!-- Puxa o rodapé que fica lá embaixo na página -->
+    <!-- Coloca o rodapé do site no final da página -->
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>

@@ -1,3 +1,4 @@
 <?php
-header('Location: select.php', true, 302);
+require_once __DIR__ . '/../includes/paths.php';
+header('Location: ' . app_url('app/select.php'), true, 302);
 exit;

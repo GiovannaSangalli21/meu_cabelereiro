@@ -1,9 +1,9 @@
 <?php
 // Liga o sistema de sessão (usado para salvar dados do usuário)
-session_start();
 
 // Puxa o arquivo que tem as funções do sistema
 require_once __DIR__ . '/../includes/functions.php';
+iniciar_sessao();
 
 // Cria uma variável vazia para guardar mensagens de aviso ou erro
 $mensagem = '';
@@ -20,7 +20,7 @@ $dados = [
 
 // Checa se a pessoa clicou no botão para enviar o formulário
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
+
     // Pega o que a pessoa digitou em cada campo do formulário
     foreach ($dados as $campo => $valor) {
         $dados[$campo] = campo_post($campo);
@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_token_valido()) {
         http_response_code(403); // Código de erro de acesso negado
         $mensagem = 'A sessão do formulário expirou. Atualize a página e tente novamente.';
-        
-    // Testa se todos os campos foram preenchidos corretamente
+
+        // Testa se todos os campos foram preenchidos corretamente
     } elseif (!validar_dados_agendamento(
         $dados['nome'],
         $dados['especialidade'],
@@ -41,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dados['horario_inicio']
     )) {
         $mensagem = 'Verifique os dados informados e preencha todos os campos corretamente.';
-        
-    // Tenta salvar os dados no banco de dados
+
+        // Tenta salvar os dados no banco de dados
     } elseif (cadastrar(
         $conexao,
         $dados['nome'],
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dados['data_agendamento']
     )) {
         // Se deu tudo certo ao salvar, envia a pessoa para a página de relatório
-        header('Location: select.php');
+        header('Location: ' . app_url('app/select.php'));
         exit(); // Para o código por aqui
     } else {
         // Se deu algum erro ao salvar no banco
@@ -63,12 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8"> <!-- Permite usar acentos e ç sem quebrar o texto -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Ajusta a página na tela do celular -->
     <title>Cadastrar Agendamento</title> <!-- Nome que aparece na aba do navegador -->
-    <link rel="stylesheet" href="../css/style.css"> <!-- Conecta o arquivo de visual (CSS) -->
+    <link rel="stylesheet" href="<?= htmlspecialchars(app_url('css/style.css'), ENT_QUOTES, 'UTF-8') ?>"> <!-- Conecta o arquivo de visual (CSS) -->
 </head>
+
 <body>
     <!-- Coloca o cabeçalho do site aqui -->
     <?php include __DIR__ . '/../includes/header.php'; ?>
@@ -82,10 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <!-- Formulário para mandar as informações quando clicar em enviar -->
-        <form action="agendar.php" method="post">
+        <form action="<?= htmlspecialchars(app_url('app/agendar.php'), ENT_QUOTES, 'UTF-8') ?>" method="post">
             <!-- Campo escondido para guardar o código de segurança -->
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
-            
+
             <!-- Campo do Nome -->
             <label for="nome">Nome Completo:</label><br>
             <input type="text" name="nome" id="nome" maxlength="100" value="<?= htmlspecialchars($dados['nome'], ENT_QUOTES, 'UTF-8') ?>" required><br><br>
@@ -95,11 +97,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <select name="especialidade" id="especialidade" required>
                 <option value="">Selecione uma opção...</option>
                 <!-- Deixa marcado a opção que o usuário escolheu se a página recarregar -->
-                <option value="Escova" <?= $dados['especialidade'] === 'Escova' ? 'selected' : '' ?>>Escova</option>
-                <option value="Corte" <?= $dados['especialidade'] === 'Corte' ? 'selected' : '' ?>>Corte</option>
-                <option value="Luzes" <?= $dados['especialidade'] === 'Luzes' ? 'selected' : '' ?>>Luzes</option>
-                <option value="Hidratação" <?= $dados['especialidade'] === 'Hidratação' ? 'selected' : '' ?>>Hidratação</option>
-                <option value="Manicure" <?= $dados['especialidade'] === 'Manicure' ? 'selected' : '' ?>>Manicure</option>
+                <?php foreach (servicos_disponiveis() as $servico): ?>
+                    <option value="<?= htmlspecialchars($servico, ENT_QUOTES, 'UTF-8') ?>" <?= $dados['especialidade'] === $servico ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($servico, ENT_QUOTES, 'UTF-8') ?>
+                    </option>
+                <?php endforeach; ?>
             </select><br><br>
 
             <!-- Campo do Telefone -->
@@ -120,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Botões para Enviar ou Limpar o formulário -->
             <div style="margin-top: 10px;">
-                <input type="submit" value="Cadastrar">
+                <button type="submit">Cadastrar agendamento</button>
                 <input type="reset" value="Limpar">
             </div>
         </form>
@@ -129,4 +131,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Coloca o rodapé do site aqui -->
     <?php include __DIR__ . '/../includes/footer.php'; ?>
 </body>
+
 </html>

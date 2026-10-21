@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../database/connect.php';
+require_once __DIR__ . '/paths.php';
 
 function campo_post(string $campo): string
 {
@@ -7,11 +8,28 @@ function campo_post(string $campo): string
     return is_string($valor) ? trim($valor) : '';
 }
 
+function iniciar_sessao(): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return;
+    }
+
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+
+    if (!session_start()) {
+        throw new RuntimeException('Não foi possível iniciar a sessão.');
+    }
+}
+
 function csrf_token(): string
 {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
-    }
+    iniciar_sessao();
 
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -22,10 +40,24 @@ function csrf_token(): string
 
 function csrf_token_valido(): bool
 {
+    iniciar_sessao();
+
     $token = $_POST['csrf_token'] ?? null;
     return is_string($token)
         && isset($_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+function servicos_disponiveis(): array
+{
+    return ['Escova', 'Corte', 'Luzes', 'Hidratação', 'Manicure'];
+}
+
+function comprimento_utf8(string $valor): ?int
+{
+    $quantidade = preg_match_all('/./us', $valor, $correspondencias);
+
+    return $quantidade === false ? null : $quantidade;
 }
 
 function validar_dados_agendamento(
@@ -36,7 +68,9 @@ function validar_dados_agendamento(
     string $data_agendamento,
     string $horario_inicio
 ): bool {
-    $servicos = ['Escova', 'Corte', 'Luzes', 'Hidratação', 'Manicure'];
+    $comprimento_nome = comprimento_utf8($nome);
+    $comprimento_telefone = comprimento_utf8($telefone);
+    $comprimento_email = comprimento_utf8($email);
     $data = DateTimeImmutable::createFromFormat('!Y-m-d', $data_agendamento);
     $erros_data = DateTimeImmutable::getLastErrors();
     $data_valida = $data !== false
@@ -44,12 +78,15 @@ function validar_dados_agendamento(
         && ($erros_data === false || ($erros_data['warning_count'] === 0 && $erros_data['error_count'] === 0));
 
     return $nome !== ''
-        && mb_strlen($nome, 'UTF-8') <= 100
-        && in_array($especialidade, $servicos, true)
+        && $comprimento_nome !== null
+        && $comprimento_nome <= 100
+        && in_array($especialidade, servicos_disponiveis(), true)
         && $telefone !== ''
-        && mb_strlen($telefone, 'UTF-8') <= 20
+        && $comprimento_telefone !== null
+        && $comprimento_telefone <= 20
         && filter_var($email, FILTER_VALIDATE_EMAIL) !== false
-        && mb_strlen($email, 'UTF-8') <= 100
+        && $comprimento_email !== null
+        && $comprimento_email <= 100
         && $data_valida
         && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $horario_inicio) === 1;
 }
@@ -124,8 +161,8 @@ function relatorio(PDO $conexao): void
         echo '<strong>E-mail:</strong> ' . $email . '<br>';
         echo '<strong>Data:</strong> ' . $data . '<br>';
         echo '<strong>Horário:</strong> ' . $horario . '<br><br>';
-        echo '<a href="update.php?id=' . $id . '">Editar</a> ';
-        echo '<form class="form-excluir" action="delete.php" method="post" onsubmit="return confirm(\'Deseja realmente excluir este agendamento?\');">';
+        echo '<a href="' . htmlspecialchars(app_url('app/update.php?id=' . $id), ENT_QUOTES, 'UTF-8') . '">Editar</a> ';
+        echo '<form class="form-excluir" action="' . htmlspecialchars(app_url('app/delete.php'), ENT_QUOTES, 'UTF-8') . '" method="post" onsubmit="return confirm(\'Deseja realmente excluir este agendamento?\');">';
         echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') . '">';
         echo '<input type="hidden" name="id" value="' . $id . '">';
         echo '<button type="submit">Excluir</button>';
@@ -178,5 +215,5 @@ function atualizar(
         ':email' => $email,
         ':horario_inicio' => $horario_inicio,
         ':data_agendamento' => $data_agendamento,
-    ]);
+    ]) && $stmt->rowCount() > 0;
 }

@@ -1,22 +1,23 @@
-## Studio Bella
+# Studio Bella
  O Studio Bella é um sistema simples e fácil de usar, feito para organizar e agilizar a marcação de horários em um salão de beleza.
 
  O objetivo principal é ajudar a ver toda a agenda do salão em um só lugar, permitindo controlar desde o cadastro de um horário até o serviço que vai ser feito.
 
-1.  (Funções do Projeto)
+### Funções do Projeto
+
 Cadastrar um horário (CREATE): Para começar, o usuário cadastra um novo agendamento. Nessa tela, dá para preencher:
 
-Nome do cliente
+ - Nome do cliente
 
-Serviço que vai fazer (corte, escova, etc.)
+ - Serviço que vai fazer (corte, escova, etc.)
 
-Telefone / WhatsApp
+ - Telefone / WhatsApp
 
-E-mail
+ -  E-mail
 
-Data do atendimento
+ - Data do atendimento
 
-Horário de início
+ - Horário de início
 
 
 Depois de cadastrado, esse horário fica salvo no sistema e pode ser visto ou mudado a qualquer momento.
@@ -31,7 +32,7 @@ Mudar as informações (UPDATE): Serve para alterar os dados de um agendamento q
 
 Com isso, o sistema faz todas as tarefas principais de um site (criar, ler, alterar e apagar).
 
-2.1 O que o sistema precisa ter (Requisitos Funcionais)
+## O que o sistema precisa ter (Requisitos Funcionais)
 RF01 - Cadastrar Horários
 O sistema tem que deixar cadastrar novos atendimentos com nome, serviço, telefone, e-mail, data e horário.
 
@@ -47,7 +48,7 @@ O sistema tem que permitir mudar qualquer informação de um horário que já fo
 RF05 - Excluir Agendamento
 O sistema tem que permitir apagar um agendamento do banco de dados quando necessário.
 
-2.2 Como o sistema deve ser (Requisitos Não Funcionais)
+## Como o sistema deve ser (Requisitos Não Funcionais)
 RNF01 - Fácil de Usar
 O site tem que ser simples, bonito e funcionar bem tanto no computador quanto na tela do celular.
 

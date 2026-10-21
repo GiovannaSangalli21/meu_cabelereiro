@@ -1,60 +1,99 @@
-# Studio Bella
- O Studio Bella é um sistema simples e fácil de usar, feito para organizar e agilizar a marcação de horários em um salão de beleza.
+## studio bella
+ Este sistema foi feito para organizar a rotina do salão de beleza de forma simples, ajudando a cadastrar e controlar os clientes, serviços e atendimentos, ficando mais facil para se agendar.
 
- O objetivo principal é ajudar a ver toda a agenda do salão em um só lugar, permitindo controlar desde o cadastro de um horário até o serviço que vai ser feito.
-
-### Funções do Projeto
-
-Cadastrar um horário (CREATE): Para começar, o usuário cadastra um novo agendamento. Nessa tela, dá para preencher:
-
- - Nome do cliente
-
- - Serviço que vai fazer (corte, escova, etc.)
-
- - Telefone / WhatsApp
-
- -  E-mail
-
- - Data do atendimento
-
- - Horário de início
+1. 2.1 Pré-Requisitos
+- PHP (v7.4 ou superior) habilitado com a extensão pdo_pgsql.
+- PostgreSQL instalado e em execução na porta padrão 5432.
+- Git instalado na máquina.
+- Navegador web atualizado.
 
 
-Depois de cadastrado, esse horário fica salvo no sistema e pode ser visto ou mudado a qualquer momento.
+#  Passo 1: Clonar repositório
+Abra o terminal do seu sistema operacioal e clone o repositório executando:
+- Clone este repositório
+git clone https://github.com/GiovannaSangalli21/meu_cabelereiro.git
 
-Ver todos os horários (READ): Nesta página, dá para ver uma lista com todos os agendamentos do salão e acompanhar os horários do dia.
+- Acesse a pasta do projeto
+meu_cabelereiro 
+# Passo 2: Configurar o Banco de Dados (Restore do Dump)
+- O projeto inclui um arquivo de carga inicial chamado dump.sql. Siga as etapas para criar a base no PostgreSQL:
 
-Ver detalhes de um agendamento (READ_WHERE): Aqui dá para buscar e ver todas as informações de apenas um cliente ou horário específico.
+1 - Abra o terminal e conecte-se ao PostgreSQL com o usuário administrador (postgres):
 
-Apagar um agendamento (DELETE): Serve para cancelar e apagar um horário da lista caso o cliente desista.
+ - psql -U postgres
 
-Mudar as informações (UPDATE): Serve para alterar os dados de um agendamento que já foi feito (como mudar o dia, o horário ou o serviço).
+2 - Dentro do ambiente do psql, execute os comandos abaixo para recriar a base de dados zerada (se a base já existir, ela será substituída):
 
-Com isso, o sistema faz todas as tarefas principais de um site (criar, ler, alterar e apagar).
+```bash
+DROP DATABASE IF EXISTS roupa;
+CREATE USER roupa WITH PASSWORD 'roupa';
+CREATE DATABASE roupa OWNER roupa;
+\q
+```
+3 - Restaurar o banco de dados
 
-## O que o sistema precisa ter (Requisitos Funcionais)
-RF01 - Cadastrar Horários
-O sistema tem que deixar cadastrar novos atendimentos com nome, serviço, telefone, e-mail, data e horário.
+Agora, restaure a estrutura e os dados do arquivo SQL na base recém-criada.
 
-RF02 - Listar Agendamentos
-O sistema tem que mostrar uma lista com todos os horários marcados, organizados por data e hora.
+Se o arquivo dump.sql estiver na raiz do projeto::
 
-RF03 - Buscar um Horário Específico
-O sistema tem que conseguir achar e mostrar os detalhes de um agendamento usando o número de identificação (ID) dele.
+# Restaura o banco de dados
+- psql -U roupa -d roupa -f /database/dump.sql
+´´´
+Se o arquivo estiver dentro de uma pasta chamada database, utilize:
 
-RF04 - Editar Agendamento
-O sistema tem que permitir mudar qualquer informação de um horário que já foi cadastrado.
+# Acesse a pasta db
+- cd db
 
-RF05 - Excluir Agendamento
-O sistema tem que permitir apagar um agendamento do banco de dados quando necessário.
+# Restaura o banco de dados
+- psql -U roupa -d roupa -f /database/dump.sql
 
-## Como o sistema deve ser (Requisitos Não Funcionais)
-RNF01 - Fácil de Usar
-O site tem que ser simples, bonito e funcionar bem tanto no computador quanto na tela do celular.
+# Volte para a raiz do projeto
+cd ..
+## Passo 3: Configurar a Conexão no PHP
+1 - Localize o arquivo de conexão presente em database/connect.php (ou na pasta equivalente do seu banco).
 
-RNF02 - Funcionar em Qualquer Navegador
-O site tem que abrir normalmente em navegadores comuns (Chrome, Firefox, Edge, Safari) sem precisar instalar nada no computador.
+2 - Abra o arquivo em seu editor e verifique se os dados de acesso correspondem ao seu ambiente PostgreSQL:
 
+PHP
+$host = 'localhost';
+$port = '5432';
+$dbname = 'roupa';
+$user = 'roupa';
+$password = 'roupa';
+Passo 4: Abrir o Site
+Na pasta do projeto, ligue o servidor digitando:
+
+Bash
+php -S localhost:8000
+Depois, abra o seu navegador e acesse:http://localhost:8000/
+
+# 2. O que o Sistema Faz (Funções)
+No sistema, você consegue fazer o controle completo (CRUD):
+
+- Cadastrar Cliente (Adicionar): Colocar novos clientes no sistema digitando nome, telefone, especialidade e horários de trabalho.
+
+- Ver Cliente(Listar): Ver uma lista com todos os clientes agendados.
+
+- Ver Detalhes: Consultar os dados específicos de apenas um cliente.
+
+- Editar cliente (Alterar): Mudar informações como telefone, especialidade ou horários ou oque ele pretende fazer de um cliente já cadastrado.
+
+- Excluir cliente (Remover): Apagar o cadastro de um cliente do sistema.
+
+- Histórico: Registrar os serviços realizados por cada cliente.
+
+3. O que o Sistema Precisa Ter
+O que ele faz (Requisitos Funcionais)
+
+- Cadastrar, listar, editar e excluir: Todo o controle dos clientes do salão.
+
+- Registrar atendimentos: Guardar o histórico do que cada cliente fez.
+
+Como ele deve ser (Requisitos Não Funcionais)
+- Fácil de usar
+- Tela limpa que funciona bem tanto no computador quanto no celular.
+
+- Funciona em qualquer lugar: Abre em navegadores modernos sem precisar instalar nada extra.
 
 ## tabela:
 ``` mermaid
@@ -95,4 +134,20 @@ erDiagram
     clientes ||--o{ agendamentos : "realiza"
     cabeleireiras ||--o{ agendamentos : "atende"
     usuarios ||--o{ clientes : "cadastra"
-´´´
+```````
+
+4. Fluxo de funcionamento
+1- O usuário ele ja entra na pagina principal.
+
+2- No Painel Principal, ele tem acesso para fazer seu cadastro como cliente, com informções pessoais dele, e oque ele deseja fazer.
+
+3- Ao se cadastrar , o registro é salvo e ele consegue editar o cadastro ou excluir.
+
+### dicionario de dados:
+![alt text](image.png)
+## cabelereias:
+![alt text](image-1.png)
+## clientes:
+![alt text](image-2.png)
+## usuario:
+![alt text](image-3.png)

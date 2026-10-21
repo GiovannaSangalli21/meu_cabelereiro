@@ -1,10 +1,11 @@
 <?php
 // Guarda as informações de acesso ao banco de dados em variáveis
-$host = getenv('DB_HOST') ?: '192.168.10.48';    // Endereço onde o banco está instalado
+$host = getenv('DB_HOST') ?: '127.0.0.1';        // Endereço onde o banco está instalado
 $port = getenv('DB_PORT') ?: '5432';             // Porta de entrada do PostgreSQL
-$dbname = getenv('DB_NAME') ?: 'roupa';          // Nome do banco de dados
-$user = getenv('DB_USER') ?: 'roupa';            // Nome do usuário de acesso
-$password = getenv('DB_PASSWORD') ?: 'giovanna'; // Senha do usuário
+$dbname = getenv('DB_NAME') ?: 'meu_cabelereiro'; // Nome do banco de dados
+$user = getenv('DB_USER') ?: 'postgres';         // Nome do usuário de acesso
+$password = getenv('DB_PASSWORD');
+$password = $password === false ? '' : $password;
 
 // O bloco "try" tenta executar a conexão com o banco
 try {
@@ -12,7 +13,7 @@ try {
     $conexao = new PDO(
         "pgsql:host={$host};port={$port};dbname={$dbname}", // Junta o endereço, porta e nome do banco
         $user,                                              // Usuário
-        $password === false ? '' : $password,               // Senha (se não tiver nada, envia em branco)
+        $password,                                           // Senha (se não tiver nada, envia em branco)
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,  // Faz o PHP avisar na hora se der algum erro
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, // Organiza os resultados do banco em uma lista fácil de ler

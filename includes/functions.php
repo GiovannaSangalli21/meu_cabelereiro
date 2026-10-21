@@ -1,101 +1,182 @@
 <?php
-// Inclui o arquivo de conexão com o banco de dados
-include "../database/connect.php";
+require_once __DIR__ . '/../database/connect.php';
 
-// Função para cadastrar um novo agendamento no banco
-function cadastrar($conexao, $nome, $especialidade, $telefone, $email, $horario_inicio, $data_agendamento)
+function campo_post(string $campo): string
 {
-    // Escreve o comando SQL para salvar os dados na tabela
-    $sql = "INSERT INTO agendamentos (nome_cliente, servico, telefone_cliente, email_cliente, data_agendamento, horario_inicio) 
-            VALUES ('$nome', '$especialidade', '$telefone', '$email', '$data_agendamento', '$horario_inicio')";
-
-    // Executa o comando no banco de dados
-    $resultado = mysqli_query($conexao, $sql);
-    
-    // Retorna se deu certo ou errado
-    return $resultado;
+    $valor = $_POST[$campo] ?? '';
+    return is_string($valor) ? trim($valor) : '';
 }
 
-// Função para apagar um agendamento pelo número do ID
-function apagar($conexao, $id)
+function csrf_token(): string
 {
-    // Escreve o comando SQL para deletar o registro pelo ID
-    $sql = "DELETE FROM agendamentos WHERE id = $id";
-    
-    // Manda o banco rodar o comando de apagar
-    $resultado = mysqli_query($conexao, $sql);
-    
-    // Retorna se conseguiu apagar
-    return $resultado;
-}
-
-// Função para buscar e mostrar todos os agendamentos na tela
-function relatorio($conexao)
-{
-    // Escreve o comando SQL para pegar todos os agendamentos organizados por data e hora
-    $sql = "SELECT * FROM agendamentos ORDER BY data_agendamento, horario_inicio";
-    
-    // Executa a busca no banco
-    $resultado = mysqli_query($conexao, $sql);
-
-    // Se não encontrar nenhum agendamento cadastrado
-    if (mysqli_num_rows($resultado) == 0) {
-        echo "<p>Nenhum agendamento cadastrado.</p>";
-        return; // Sai da função
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
     }
 
-    // Enquanto houver agendamentos na lista, pega um por um e exibe na tela
-    while ($agendamento = mysqli_fetch_assoc($resultado)) {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_token_valido(): bool
+{
+    $token = $_POST['csrf_token'] ?? null;
+    return is_string($token)
+        && isset($_SESSION['csrf_token'])
+        && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+function validar_dados_agendamento(
+    string $nome,
+    string $especialidade,
+    string $telefone,
+    string $email,
+    string $data_agendamento,
+    string $horario_inicio
+): bool {
+    $servicos = ['Escova', 'Corte', 'Luzes', 'Hidratação', 'Manicure'];
+    $data = DateTimeImmutable::createFromFormat('!Y-m-d', $data_agendamento);
+    $erros_data = DateTimeImmutable::getLastErrors();
+    $data_valida = $data !== false
+        && $data->format('Y-m-d') === $data_agendamento
+        && ($erros_data === false || ($erros_data['warning_count'] === 0 && $erros_data['error_count'] === 0));
+
+    return $nome !== ''
+        && mb_strlen($nome, 'UTF-8') <= 100
+        && in_array($especialidade, $servicos, true)
+        && $telefone !== ''
+        && mb_strlen($telefone, 'UTF-8') <= 20
+        && filter_var($email, FILTER_VALIDATE_EMAIL) !== false
+        && mb_strlen($email, 'UTF-8') <= 100
+        && $data_valida
+        && preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $horario_inicio) === 1;
+}
+
+function cadastrar(
+    PDO $conexao,
+    string $nome,
+    string $especialidade,
+    string $telefone,
+    string $email,
+    string $horario_inicio,
+    string $data_agendamento
+): bool {
+    try {
+        $stmt = $conexao->prepare(
+            'INSERT INTO agendamentos
+                (nome_cliente, servico, telefone_cliente, email_cliente, data_agendamento, horario_inicio)
+             VALUES
+                (:nome, :especialidade, :telefone, :email, :data_agendamento, :horario_inicio)'
+        );
+
+        return $stmt->execute([
+            ':nome' => $nome,
+            ':especialidade' => $especialidade,
+            ':telefone' => $telefone,
+            ':email' => $email,
+            ':data_agendamento' => $data_agendamento,
+            ':horario_inicio' => $horario_inicio,
+        ]);
+    } catch (PDOException $e) {
+        error_log('Falha ao cadastrar agendamento: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function apagar(PDO $conexao, int $id): bool
+{
+    $stmt = $conexao->prepare('DELETE FROM agendamentos WHERE id = :id');
+    return $stmt->execute([':id' => $id]) && $stmt->rowCount() > 0;
+}
+
+function relatorio(PDO $conexao): void
+{
+    $stmt = $conexao->query(
+        'SELECT id, nome_cliente AS nome, servico AS especialidade,
+                telefone_cliente AS telefone, email_cliente AS email,
+                data_agendamento, horario_inicio
+         FROM agendamentos
+         ORDER BY data_agendamento, horario_inicio'
+    );
+    $agendamentos = $stmt->fetchAll();
+
+    if (!$agendamentos) {
+        echo '<p>Nenhum agendamento cadastrado.</p>';
+        return;
+    }
+
+    foreach ($agendamentos as $agendamento) {
+        $id = (int) $agendamento['id'];
+        $nome = htmlspecialchars($agendamento['nome'], ENT_QUOTES, 'UTF-8');
+        $servico = htmlspecialchars($agendamento['especialidade'], ENT_QUOTES, 'UTF-8');
+        $telefone = htmlspecialchars($agendamento['telefone'], ENT_QUOTES, 'UTF-8');
+        $email = htmlspecialchars((string) ($agendamento['email'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $data = htmlspecialchars((string) $agendamento['data_agendamento'], ENT_QUOTES, 'UTF-8');
+        $horario = htmlspecialchars(substr((string) $agendamento['horario_inicio'], 0, 5), ENT_QUOTES, 'UTF-8');
+
         echo '<section class="agendamento">';
-        echo '<strong>ID:</strong> ' . $agendamento['id'] . '<br>';
-        echo '<strong>Nome:</strong> ' . $agendamento['nome_cliente'] . '<br>';
-        echo '<strong>Serviço:</strong> ' . $agendamento['servico'] . '<br>';
-        echo '<strong>Telefone:</strong> ' . $agendamento['telefone_cliente'] . '<br>';
-        echo '<strong>E-mail:</strong> ' . $agendamento['email_cliente'] . '<br>';
-        echo '<strong>Data:</strong> ' . $agendamento['data_agendamento'] . '<br>';
-        echo '<strong>Horário:</strong> ' . $agendamento['horario_inicio'] . '<br><br>';
-        
-        // Botão para ir para a página de edição
-        echo '<a href="update.php?id=' . $agendamento['id'] . '">Editar</a> ';
-        
-        // Formulário com botão para apagar o agendamento
-        echo '<form action="delete.php" method="post" style="display:inline;">';
-        echo '<input type="hidden" name="id" value="' . $agendamento['id'] . '">';
-        echo '<button type="submit" onclick="return confirm(\'Deseja excluir?\')">Excluir</button>';
+        echo '<strong>ID:</strong> ' . $id . '<br>';
+        echo '<strong>Nome:</strong> ' . $nome . '<br>';
+        echo '<strong>Serviço:</strong> ' . $servico . '<br>';
+        echo '<strong>Telefone:</strong> ' . $telefone . '<br>';
+        echo '<strong>E-mail:</strong> ' . $email . '<br>';
+        echo '<strong>Data:</strong> ' . $data . '<br>';
+        echo '<strong>Horário:</strong> ' . $horario . '<br><br>';
+        echo '<a href="update.php?id=' . $id . '">Editar</a> ';
+        echo '<form class="form-excluir" action="delete.php" method="post" onsubmit="return confirm(\'Deseja realmente excluir este agendamento?\');">';
+        echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') . '">';
+        echo '<input type="hidden" name="id" value="' . $id . '">';
+        echo '<button type="submit">Excluir</button>';
         echo '</form>';
-        echo '</section><hr>';
+        echo '</section>';
     }
 }
 
-// Função para buscar as informações de um único agendamento pelo ID
-function consultar($conexao, $id)
+function consultar(PDO $conexao, int $id): ?array
 {
-    // Comando SQL para buscar apenas o registro com o ID selecionado
-    $sql = "SELECT id, nome_cliente AS nome, servico AS especialidade, telefone_cliente AS telefone, email_cliente AS email, data_agendamento, horario_inicio FROM agendamentos WHERE id = $id";
-    
-    // Executa a busca
-    $resultado = mysqli_query($conexao, $sql);
-    
-    // Retorna os dados do agendamento organizados em uma lista
-    return mysqli_fetch_assoc($resultado);
+    $stmt = $conexao->prepare(
+        'SELECT id, nome_cliente AS nome, servico AS especialidade,
+                telefone_cliente AS telefone, email_cliente AS email,
+                data_agendamento, horario_inicio
+         FROM agendamentos
+         WHERE id = :id'
+    );
+    $stmt->execute([':id' => $id]);
+    $agendamento = $stmt->fetch();
+
+    return $agendamento === false ? null : $agendamento;
 }
 
-// Função para alterar as informações de um agendamento existente
-function atualizar($conexao, $id, $nome, $especialidade, $telefone, $email, $horario_inicio, $data_agendamento)
-{
-    // Escreve o comando SQL para atualizar os campos no banco
-    $sql = "UPDATE agendamentos SET 
-            nome_cliente = '$nome', 
-            servico = '$especialidade', 
-            telefone_cliente = '$telefone', 
-            email_cliente = '$email', 
-            horario_inicio = '$horario_inicio', 
-            data_agendamento = '$data_agendamento' 
-            WHERE id = $id";
+function atualizar(
+    PDO $conexao,
+    int $id,
+    string $nome,
+    string $especialidade,
+    string $telefone,
+    string $email,
+    string $horario_inicio,
+    string $data_agendamento
+): bool {
+    $stmt = $conexao->prepare(
+        'UPDATE agendamentos
+         SET nome_cliente = :nome,
+             servico = :especialidade,
+             telefone_cliente = :telefone,
+             email_cliente = :email,
+             horario_inicio = :horario_inicio,
+             data_agendamento = :data_agendamento
+         WHERE id = :id'
+    );
 
-    // Manda o banco atualizar os dados
-    $resultado = mysqli_query($conexao, $sql);
-    
-    // Retorna se deu certo a atualização
-    return $resultado;
+    return $stmt->execute([
+        ':id' => $id,
+        ':nome' => $nome,
+        ':especialidade' => $especialidade,
+        ':telefone' => $telefone,
+        ':email' => $email,
+        ':horario_inicio' => $horario_inicio,
+        ':data_agendamento' => $data_agendamento,
+    ]);
 }

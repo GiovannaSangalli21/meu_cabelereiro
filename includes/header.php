@@ -1,19 +1,17 @@
-<?php
-$diretorio_script = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
-if (basename($diretorio_script) === 'app') {
-    $diretorio_script = dirname($diretorio_script);
-}
-$base_url = rtrim($diretorio_script, '/');
-$link_inicio = $base_url . '/index.php';
-$link_agendar = $base_url . '/app/agendar.php';
-$link_select = $base_url . '/app/select.php';
-?>
-
+<!-- Abre a área do cabeçalho do site -->
 <header>
+    <!-- Nome do salão em destaque principal -->
     <h1>Studio Bella</h1>
+    
+    <!-- Menu de navegação com os links do site -->
     <nav>
-        <a href="<?= htmlspecialchars($link_inicio, ENT_QUOTES, 'UTF-8') ?>">Início</a> |
-        <a href="<?= htmlspecialchars($link_agendar, ENT_QUOTES, 'UTF-8') ?>">Cadastrar Agendamento</a> |
-        <a href="<?= htmlspecialchars($link_select, ENT_QUOTES, 'UTF-8') ?>">Relatório</a>
+        <!-- Link que leva de volta para a página inicial -->
+        <a href="../index.php">Início</a> |
+        
+        <!-- Link que abre a tela de cadastro de novos agendamentos -->
+        <a href="agendar.php">Cadastrar Agendamento</a> |
+        
+        <!-- Link que abre a lista com todos os agendamentos salvos -->
+        <a href="select.php">Relatório</a>
     </nav>
 </header>

@@ -1,8 +1,14 @@
 <?php
+// Liga o sistema de sessão (usado para salvar dados do usuário)
 session_start();
+
+// Puxa o arquivo que tem as funções do sistema
 require_once __DIR__ . '/../includes/functions.php';
 
+// Cria uma variável vazia para guardar mensagens de aviso ou erro
 $mensagem = '';
+
+// Cria uma lista (array) para guardar os dados digitados no formulário
 $dados = [
     'nome' => '',
     'especialidade' => '',
@@ -12,14 +18,20 @@ $dados = [
     'horario_inicio' => '',
 ];
 
+// Checa se a pessoa clicou no botão para enviar o formulário
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    
+    // Pega o que a pessoa digitou em cada campo do formulário
     foreach ($dados as $campo => $valor) {
         $dados[$campo] = campo_post($campo);
     }
 
+    // Testa se o código de segurança do formulário está certo
     if (!csrf_token_valido()) {
-        http_response_code(403);
+        http_response_code(403); // Código de erro de acesso negado
         $mensagem = 'A sessão do formulário expirou. Atualize a página e tente novamente.';
+        
+    // Testa se todos os campos foram preenchidos corretamente
     } elseif (!validar_dados_agendamento(
         $dados['nome'],
         $dados['especialidade'],
@@ -29,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dados['horario_inicio']
     )) {
         $mensagem = 'Verifique os dados informados e preencha todos os campos corretamente.';
+        
+    // Tenta salvar os dados no banco de dados
     } elseif (cadastrar(
         $conexao,
         $dados['nome'],
@@ -38,9 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dados['horario_inicio'],
         $dados['data_agendamento']
     )) {
+        // Se deu tudo certo ao salvar, envia a pessoa para a página de relatório
         header('Location: select.php');
-        exit();
+        exit(); // Para o código por aqui
     } else {
+        // Se deu algum erro ao salvar no banco
         $mensagem = "Não foi possível cadastrar o agendamento. Verifique a estrutura da tabela e tente novamente.";
     }
 }
@@ -48,29 +64,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastrar Agendamento</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <meta charset="UTF-8"> <!-- Permite usar acentos e ç sem quebrar o texto -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Ajusta a página na tela do celular -->
+    <title>Cadastrar Agendamento</title> <!-- Nome que aparece na aba do navegador -->
+    <link rel="stylesheet" href="../css/style.css"> <!-- Conecta o arquivo de visual (CSS) -->
 </head>
 <body>
+    <!-- Coloca o cabeçalho do site aqui -->
     <?php include __DIR__ . '/../includes/header.php'; ?>
 
     <main>
         <h2>Novo Agendamento</h2>
 
+        <!-- Se tiver alguma mensagem de erro, mostra ela aqui -->
         <?php if ($mensagem !== ''): ?>
             <p class="mensagem-erro"><strong><?= htmlspecialchars($mensagem, ENT_QUOTES, 'UTF-8') ?></strong></p>
         <?php endif; ?>
 
+        <!-- Formulário para mandar as informações quando clicar em enviar -->
         <form action="agendar.php" method="post">
+            <!-- Campo escondido para guardar o código de segurança -->
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+            
+            <!-- Campo do Nome -->
             <label for="nome">Nome Completo:</label><br>
             <input type="text" name="nome" id="nome" maxlength="100" value="<?= htmlspecialchars($dados['nome'], ENT_QUOTES, 'UTF-8') ?>" required><br><br>
 
+            <!-- Caixinha para escolher o Serviço -->
             <label for="especialidade">Serviço Desejado:</label><br>
             <select name="especialidade" id="especialidade" required>
                 <option value="">Selecione uma opção...</option>
+                <!-- Deixa marcado a opção que o usuário escolheu se a página recarregar -->
                 <option value="Escova" <?= $dados['especialidade'] === 'Escova' ? 'selected' : '' ?>>Escova</option>
                 <option value="Corte" <?= $dados['especialidade'] === 'Corte' ? 'selected' : '' ?>>Corte</option>
                 <option value="Luzes" <?= $dados['especialidade'] === 'Luzes' ? 'selected' : '' ?>>Luzes</option>
@@ -78,18 +102,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <option value="Manicure" <?= $dados['especialidade'] === 'Manicure' ? 'selected' : '' ?>>Manicure</option>
             </select><br><br>
 
+            <!-- Campo do Telefone -->
             <label for="telefone">Telefone / WhatsApp:</label><br>
             <input type="tel" name="telefone" id="telefone" maxlength="20" value="<?= htmlspecialchars($dados['telefone'], ENT_QUOTES, 'UTF-8') ?>" required><br><br>
 
+            <!-- Campo do E-mail -->
             <label for="email">E-mail:</label><br>
             <input type="email" name="email" id="email" maxlength="100" value="<?= htmlspecialchars($dados['email'], ENT_QUOTES, 'UTF-8') ?>" required><br><br>
 
+            <!-- Campo de escolher a Data -->
             <label for="data_agendamento">Data do Atendimento:</label><br>
             <input type="date" name="data_agendamento" id="data_agendamento" value="<?= htmlspecialchars($dados['data_agendamento'], ENT_QUOTES, 'UTF-8') ?>" required><br><br>
 
+            <!-- Campo de escolher o Horário -->
             <label for="horario_inicio">Horário de Atendimento:</label><br>
             <input type="time" name="horario_inicio" id="horario_inicio" value="<?= htmlspecialchars($dados['horario_inicio'], ENT_QUOTES, 'UTF-8') ?>" required><br><br>
 
+            <!-- Botões para Enviar ou Limpar o formulário -->
             <div style="margin-top: 10px;">
                 <input type="submit" value="Cadastrar">
                 <input type="reset" value="Limpar">
@@ -97,6 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
     </main>
 
+    <!-- Coloca o rodapé do site aqui -->
     <?php include __DIR__ . '/../includes/footer.php'; ?>
 </body>
 </html>

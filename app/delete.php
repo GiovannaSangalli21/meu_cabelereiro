@@ -1,46 +1,68 @@
 <?php
+// Inicia a sessão para usar variáveis salvas no sistema
 session_start();
-require_once __DIR__ . '/../includes/functions.php';
 
-$mensagem = '';
+// Puxa o arquivo que tem as funções de apagar e conectar no banco
+include "../includes/functions.php";
+
+// Cria variáveis para guardar a mensagem e saber se deu certo
+$mensagem = "";
 $sucesso = false;
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    header('Allow: POST');
-    $mensagem = 'A exclusão deve ser solicitada pelo relatório.';
-} elseif (!csrf_token_valido()) {
-    http_response_code(403);
-    $mensagem = 'A sessão expirou. Atualize o relatório e tente novamente.';
-} else {
-    $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-    if ($id === false || $id === null) {
-        http_response_code(400);
-        $mensagem = 'O identificador do agendamento é inválido.';
-    } else {
+// Checa se o formulário foi enviado pelo método POST
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    
+    // Verifica se o ID do agendamento foi enviado no formulário
+    if (isset($_POST['id'])) {
+        // Pega o ID enviado e guarda na variável $id
+        $id = $_POST['id'];
+        
+        // Chama a função para apagar no banco de dados usando o ID
         $sucesso = apagar($conexao, $id);
-        $mensagem = $sucesso
-            ? 'Agendamento excluído com sucesso.'
-            : 'Não foi possível excluir o agendamento. Ele pode não existir ou ocorreu um erro no banco de dados.';
+        
+        // Se a função conseguiu apagar
+        if ($sucesso) {
+            $mensagem = "Agendamento excluído com sucesso!";
+        } else {
+            // Se ocorreu algum problema no banco
+            $mensagem = "Erro ao excluir o agendamento.";
+        }
+    } else {
+        // Se não mandaram o ID do agendamento
+        $mensagem = "ID do agendamento não encontrado.";
     }
+    
+} else {
+    // Se a pessoa tentou abrir a página direto sem ser pelo formulário
+    $mensagem = "Acesso inválido.";
 }
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excluir Agendamento</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <meta charset="UTF-8"> <!-- Aceita acentos e caracteres especiais -->
+    <title>Excluir Agendamento</title> <!-- Título da aba do navegador -->
+    <link rel="stylesheet" href="../css/style.css"> <!-- Arquivo de estilo CSS -->
 </head>
 <body>
-    <?php include __DIR__ . '/../includes/header.php'; ?>
+    <!-- Coloca o cabeçalho do site na página -->
+    <?php include "../includes/header.php"; ?>
 
     <main>
-        <p class="<?= $sucesso ? '' : 'mensagem-erro' ?>"><?= htmlspecialchars($mensagem, ENT_QUOTES, 'UTF-8') ?></p>
-        <p><a href="select.php">Voltar ao relatório</a></p>
+        <!-- Se deu certo, mostra a mensagem em verde -->
+        <?php if ($sucesso): ?>
+            <p style="color: green;"><?php echo $mensagem; ?></p>
+        <!-- Se deu errado, mostra a mensagem em vermelho -->
+        <?php else: ?>
+            <p style="color: red;"><?php echo $mensagem; ?></p>
+        <?php endif; ?>
+
+        <br>
+        <!-- Botão para voltar para a lista de agendamentos -->
+        <a href="select.php">Voltar ao relatório</a>
     </main>
 
-    <?php include __DIR__ . '/../includes/footer.php'; ?>
+    <!-- Coloca o rodapé do site na página -->
+    <?php include "../includes/footer.php"; ?>
 </body>
 </html>

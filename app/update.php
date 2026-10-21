@@ -1,148 +1,98 @@
 <?php
-// Inicia a sessão PHP para permitir a gestão de variáveis de sessão no sistema
+// Liga a sessão para salvar e usar dados do usuário
 session_start();
 
-// Importa o arquivo de funções gerais contendo a conexão com o banco de dados ($conexao) e funções SQL
-require_once __DIR__ . '/../includes/functions.php';
+// Puxa o arquivo com as funções de consultar e atualizar no banco
+include "../includes/functions.php";
 
-// Inicializa a variável de mensagem com valor vazio para ser exibida após a atualização
-$mensagem = '';
-$dados = [];
+// Cria uma variável vazia para guardar a mensagem de retorno
+$mensagem = "";
 
-// Captura o ID passado via parâmetro GET na URL (ex: update.php?id=3), ou atribui null se não existir
-$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-
-// Se nenhum ID válido for fornecido na URL, redireciona o usuário para a lista/relatório
-if (!$id) {
-    header('Location: select.php');
+// Pega o ID que veio na URL da página (ex: update.php?id=2)
+if (isset($_GET['id'])) {
+    $id =$_GET['id'];
+} else {
+    // Se não tiver ID na URL, manda a pessoa de volta para a lista
+    header("Location: select.php");
     exit;
 }
 
-// Verifica se o formulário foi submetido via método POST para processar a alteração
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $dados = [
-        'nome' => campo_post('nome'),
-        'especialidade' => campo_post('especialidade'),
-        'telefone' => campo_post('telefone'),
-        'email' => campo_post('email'),
-        'data_agendamento' => campo_post('data_agendamento'),
-        'horario_inicio' => campo_post('horario_inicio'),
-    ];
+// Verifica se a pessoa clicou no botão para enviar o formulário
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Pega as informações alteradas no formulário
+    $nome =$_POST['nome'];
+    $especialidade =$_POST['especialidade'];
+    $telefone =$_POST['telefone'];
+    $email =$_POST['email'];
+    $data_agendamento =$_POST['data_agendamento'];
+    $horario_inicio =$_POST['horario_inicio'];
 
-    if (!csrf_token_valido()) {
-        http_response_code(403);
-        $mensagem = 'A sessão do formulário expirou. Atualize a página e tente novamente.';
-    } elseif (!validar_dados_agendamento(
-        $dados['nome'],
-        $dados['especialidade'],
-        $dados['telefone'],
-        $dados['email'],
-        $dados['data_agendamento'],
-        $dados['horario_inicio']
-    )) {
-        $mensagem = 'Verifique os dados informados e preencha todos os campos corretamente.';
-    } elseif (atualizar(
-        $conexao,
-        $id,
-        $dados['nome'],
-        $dados['especialidade'],
-        $dados['telefone'],
-        $dados['email'],
-        $dados['horario_inicio'],
-        $dados['data_agendamento']
-    )) {
-        $mensagem = "Agendamento atualizado com sucesso!";
+    // Chama a função que altera os dados no banco de dados
+    $sucesso = atualizar($conexao,$id, $nome,$especialidade, $telefone,$email, $horario_inicio,$data_agendamento);
+
+    // Se salvou no banco com sucesso
+    if ($sucesso) {$mensagem = "Agendamento atualizado com sucesso!";
     } else {
-        $mensagem = "Não foi possível atualizar o cadastro. Verifique os dados e tente novamente.";
+        // Se deu algum erro ao salvar no banco
+        $mensagem = "Erro ao atualizar os dados.";
     }
 }
 
-// Busca os dados atuais do registro no banco de dados para preencher o formulário
-try {
-    $agendamento = consultar($conexao, $id);
-} catch (PDOException $e) {
-    error_log('Erro ao consultar registro: ' . $e->getMessage());
-    http_response_code(500);
-    exit('Não foi possível consultar o cadastro. Verifique a conexão com o banco de dados.');
-}
+// Busca os dados antigos do agendamento para preencher os campos do formulário
+$agendamento = consultar($conexao,$id);
 
-// Se o registro não for encontrado no banco de dados (ID inexistente), redireciona para a lista
+// Se o agendamento não existir no banco, volta para a lista
 if (!$agendamento) {
-    header('Location: select.php');
+    header("Location: select.php");
     exit;
-}
-
-if (!$dados) {
-    $dados = $agendamento;
 }
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <!-- Define a codificação de caracteres como UTF-8 para suporte correto a acentos -->
-    <meta charset="UTF-8">
-    <!-- Configura a responsividade para adaptação em dispositivos móveis -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Define o título exibido na aba do navegador -->
-    <title>Editar Agendamento</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <meta charset="UTF-8"> <!-- Permite usar acentos no texto -->
+    <title>Editar Agendamento</title> <!-- Título da aba do navegador -->
+    <link rel="stylesheet" href="../css/style.css"> <!-- Arquivo de estilo CSS -->
 </head>
 <body>
-    <!-- Inclui o cabeçalho padrão com o menu de navegação da aplicação -->
-    <?php include __DIR__ . '/../includes/header.php'; ?>
+    <!-- Coloca o cabeçalho do site na página -->
+    <?php include "../includes/header.php"; ?>
 
-    <!-- Conteúdo principal da página de edição -->
     <main>
         <h1>Editar Agendamento</h1>
 
-        <!-- Exibe a mensagem de sucesso caso as alterações tenham sido salvas -->
+        <!-- Se tiver alguma mensagem (sucesso ou erro), mostra ela aqui -->
         <?php if (!empty($mensagem)): ?>
-            <p class="<?= $mensagem === 'Agendamento atualizado com sucesso!' ? '' : 'mensagem-erro' ?>"><strong><?= htmlspecialchars($mensagem, ENT_QUOTES, 'UTF-8') ?></strong></p>
+            <p class="mensagem"><?php echo $mensagem; ?></p>
         <?php endif; ?>
 
-        <!-- Formulário para envio dos dados via POST apontando para a própria URL com o ID -->
-        <form action="update.php?id=<?= htmlspecialchars((string) $id, ENT_QUOTES, 'UTF-8') ?>" method="post">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+        <!-- Formulário para mandar os dados atualizados para esta mesma página -->
+        <form action="update.php?id=<?php echo $id; ?>" method="post">
+            <!-- Campo do Nome -->
             <div>
                 <label for="nome">Nome Completo:</label><br>
-                <input type="text" id="nome" name="nome" maxlength="100" value="<?= htmlspecialchars($dados['nome'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                <input type="text" id="nome" name="nome" value="<?php echo $agendamento['nome']; ?>" required>
             </div>
             <br>
+            <!-- Caixinha para escolher o Serviço -->
             <div>
                 <label for="especialidade">Serviço:</label><br>
                 <select id="especialidade" name="especialidade" required>
-                    <?php foreach (['Escova', 'Corte', 'Luzes', 'Hidratação', 'Manicure'] as $servico): ?>
-                        <option value="<?= htmlspecialchars($servico, ENT_QUOTES, 'UTF-8') ?>" <?= ($dados['especialidade'] ?? '') === $servico ? 'selected' : '' ?>><?= htmlspecialchars($servico, ENT_QUOTES, 'UTF-8') ?></option>
-                    <?php endforeach; ?>
+                    <!-- Compara o serviço do banco com cada opção para deixar marcado o serviço correto -->
+                    <option value="Escova" <?php if ($agendamento['especialidade'] == 'Escova') echo 'selected'; ?>>Escova</option>
+                    <option value="Corte" <?php if ($agendamento['especialidade'] == 'Corte') echo 'selected'; ?>>Corte</option>
+                    <option value="Luzes" <?php if ($agendamento['especialidade'] == 'Luzes') echo 'selected'; ?>>Luzes</option>
+                    <option value="Hidratação" <?php if ($agendamento['especialidade'] == 'Hidratação') echo 'selected'; ?>>Hidratação</option>
+                    <option value="Manicure" <?php if ($agendamento['especialidade'] == 'Manicure') echo 'selected'; ?>>Manicure</option>
                 </select>
             </div>
             <br>
+            <!-- Campo do Telefone -->
             <div>
                 <label for="telefone">Telefone:</label><br>
-                <input type="tel" id="telefone" name="telefone" maxlength="20" value="<?= htmlspecialchars($dados['telefone'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                <input type="tel" id="telefone" name="telefone" value="<?php echo $agendamento['telefone']; ?>" required>
             </div>
             <br>
+            <!-- Campo do E-mail -->
             <div>
-                <label for="email">E-mail:</label><br>
-                <input type="email" id="email" name="email" maxlength="100" value="<?= htmlspecialchars($dados['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
-            </div>
-            <br>
-            <div>
-                <label for="data_agendamento">Data do Atendimento:</label><br>
-                <input type="date" id="data_agendamento" name="data_agendamento" value="<?= htmlspecialchars($dados['data_agendamento'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
-            </div>
-            <br>
-            <div>
-                <label for="horario_inicio">Horário do Atendimento:</label><br>
-                <input type="time" id="horario_inicio" name="horario_inicio" value="<?= htmlspecialchars(substr($dados['horario_inicio'] ?? '', 0, 5), ENT_QUOTES, 'UTF-8') ?>" required>
-            </div>
-            <br>
-            <button type="submit">Salvar Alterações</button>
-            <a href="select.php">Voltar para a lista</a>
-        </form>
-    </main>
-
-    <!-- Inclui o rodapé padrão da aplicação -->
-    <?php include __DIR__ . '/../includes/footer.php'; ?>
-</body>
-</html>
+                <label for="email">E-

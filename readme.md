@@ -152,5 +152,3 @@ erDiagram
 ## usuario:
 ![alt text](image-3.png)
 
-## prototipagem:
-![alt text](image-4.png)
